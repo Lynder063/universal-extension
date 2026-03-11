@@ -154,6 +154,12 @@ function monitorPlayback() {
 }
 
 async function init() {
+  const { disabled_sites } = await chrome.storage.local.get(["disabled_sites"])
+  const host = window.location.hostname.replace(/^www./, "")
+  if (Array.isArray(disabled_sites) && disabled_sites.includes(host)) {
+    return
+  }
+
   const video = await new Promise<HTMLVideoElement | null>((res) => {
     let attempts = 0
     const check = setInterval(() => {
