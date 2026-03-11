@@ -30,14 +30,46 @@ export function matchNetflix(url: string): boolean {
   return NETFLIX_URL.test(url)
 }
 
-export function extractNetflix(
+export async function extractNetflix(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
+  let netflix_id: string | null = null
+  const titleMatch = url.match(/\/title\/(\d+)/)
+  const jbvMatch = url.match(/\?jbv=(\d+)/)
+
+  if (titleMatch) {
+    netflix_id = titleMatch[1]
+  } else if (jbvMatch) {
+    netflix_id = jbvMatch[1]
+  }
+
   const title = cleanTitle(documentTitle)
   const { season, episode } = parseSeasonEpisodeFromBody(bodyText)
+
+  if (netflix_id) {
+    const response = await chrome.runtime.sendMessage({
+      action: "fetchNetflixMetadata",
+      netflixId: netflix_id,
+      documentTitle: documentTitle,
+      season: season,
+      episode: episode
+    })
+
+    if (response && response.tmdb_id) {
+      return {
+        title: response.title || cleanTitle(documentTitle) || "Netflix",
+        tmdb_id: response.tmdb_id,
+        type: response.type,
+        season: response.season,
+        episode: response.episode,
+        episode_id: null,
+        currentTime
+      }
+    }
+  }
 
   const type: "tv" | "movie" =
     season != null || episode != null ? "tv" : "movie"

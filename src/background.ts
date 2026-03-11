@@ -128,5 +128,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "resolveAndFetch" && request.data) {
     handleDiscovery(request.data).then(sendResponse)
     return true
+  } else if (request.action === "fetchNetflixMetadata" && request.netflixId) {
+    const { documentTitle, season, episode } = request
+    const isTV = season != null || episode != null
+
+    handleDiscovery({
+      title: documentTitle,
+      isTV: isTV,
+      season: season,
+      episode: episode
+    }).then(sendResponse)
+    return true
   }
 })
