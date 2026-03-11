@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react"
 import smallLogo from "url:../assets/small-logo.svg"
 
 import { api, API_URL } from "./popup/api"
+import { ErrorDisplay } from "./popup/ErrorDisplay"
 import { Footer } from "./popup/Footer"
 import { MainPage, type SegmentType } from "./popup/MainPage"
 import { SetupPage } from "./popup/SetupPage"
 import { StatsPage } from "./popup/StatsPage"
-import { formatTime, parseTimeToSeconds } from "./popup/utils"
+import { formatSeconds, formatTime, parseTimeToSeconds } from "./popup/utils"
 
 function IndexPopup() {
   const [view, setView] = useState<"setup" | "main" | "stats">("setup")
@@ -21,6 +22,7 @@ function IndexPopup() {
   const [status, setStatus] = useState("")
   const [statusColor, setStatusColor] = useState("")
   const [setupPageKey, setSetupPageKey] = useState("")
+  const [errorMessage, setErrorMessage] = useState(null)
 
   const loadPlayerInfo = useCallback(async () => {
     const [tab] = await api.tabs.query({ active: true, currentWindow: true })
@@ -66,12 +68,25 @@ function IndexPopup() {
   }, [])
 
   useEffect(() => {
-    api.storage.local.get(["introdb_api_key"]).then(({ introdb_api_key }) => {
-      if (introdb_api_key) {
-        setView("main")
-        loadPlayerInfo()
-      }
-    })
+    api.storage.local
+      .get(["introdb_api_key", "error"])
+      .then(({ introdb_api_key, error }) => {
+        if (error && Date.now() - error.time < 1000 * 60) {
+          // Only show recent errors (1 minute)
+          if (error.type === "rate_limited") {
+            const timeString = formatSeconds(error.reset)
+            setErrorMessage(`Usage limit reached. Try again in ${timeString}.`)
+          } else if (error.type === "api_unreachable") {
+            setErrorMessage("API is unreachable. Please try again later.")
+          }
+          api.storage.local.remove("error")
+        }
+
+        if (introdb_api_key) {
+          setView("main")
+          loadPlayerInfo()
+        }
+      })
   }, [loadPlayerInfo])
 
   useEffect(() => {
@@ -171,6 +186,7 @@ function IndexPopup() {
 
   return (
     <>
+      <ErrorDisplay message={errorMessage} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap');
         html, body {

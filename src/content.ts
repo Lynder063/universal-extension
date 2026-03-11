@@ -20,6 +20,7 @@ interface IntroResponse {
   recap?: Segment[]
   credits?: Segment[]
   preview?: Segment[]
+  reset?: number
 }
 
 interface MediaContext {
@@ -213,6 +214,14 @@ async function init() {
       episode: ctx.episode
     }
     monitorPlayback()
+  } else if (res?.status === "rate_limited") {
+    chrome.storage.local.set({
+      error: { type: "rate_limited", reset: res.reset, time: Date.now() }
+    })
+  } else if (res?.status === "api_unreachable") {
+    chrome.storage.local.set({
+      error: { type: "api_unreachable", time: Date.now() }
+    })
   } else if (!activeTimestamps) {
     setTimeout(init, 5000)
   }

@@ -25,6 +25,7 @@ interface DiscoveryResult {
   recap?: Array<{ start_ms: number; end_ms: number }>
   credits?: Array<{ start_ms: number; end_ms: number }>
   preview?: Array<{ start_ms: number; end_ms: number }>
+  reset?: number
 }
 
 interface DiscoveryRequest {
@@ -87,7 +88,18 @@ async function handleDiscovery(
       { headers: { Accept: "application/json" } }
     )
 
-    if (!introRes.ok) return { status: "no_data", tmdb_id: tmdbId }
+    if (!introRes.ok) {
+      if (introRes.status === 429) {
+        const reset =
+          introRes.headers.get("X-RateLimit-Reset") ||
+          introRes.headers.get("X-UsageLimit-Reset")
+        return {
+          status: "rate_limited",
+          reset: reset ? parseInt(reset, 10) : undefined
+        }
+      }
+      return { status: "no_data", tmdb_id: tmdbId }
+    }
 
     const introData = await introRes.json()
     const result: DiscoveryResult = { status: "success", tmdb_id: tmdbId }
@@ -108,7 +120,7 @@ async function handleDiscovery(
     }
     return result
   } catch {
-    return { status: "error" }
+    return { status: "api_unreachable" }
   }
 }
 
