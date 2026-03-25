@@ -1,11 +1,11 @@
 import type { MediaContext } from "./types"
 
-export function extractGeneric(
+export async function extractGeneric(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   let tmdb_id: number | null = null
   let season: number | null = null
   let episode: number | null = null

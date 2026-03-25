@@ -30,6 +30,7 @@ interface MediaContext {
   episode?: number
   episode_id?: number
   tmdb_id?: number
+  imdb_id?: string
   year?: string
 }
 
@@ -203,14 +204,14 @@ async function init() {
 
   initRetryCount = 0
 
-  const ctx = extractMediaContext(
+  const ctx = (await extractMediaContext(
     window.location.href,
     document.title,
     document.body.innerText,
     video.currentTime
-  ) as MediaContext
+  )) as MediaContext
 
-  if (!ctx?.title && !ctx?.tmdb_id) return
+  if (!ctx?.title && !ctx?.tmdb_id && !ctx?.imdb_id) return
 
   const res = (await chrome.runtime.sendMessage({
     action: "resolveAndFetch",
@@ -266,25 +267,30 @@ chrome.runtime.onMessage.addListener(
           currentTime: typeof currentTime === "number" ? currentTime : undefined
         })
       } else {
-        const ctx = extractMediaContext(
+        extractMediaContext(
           window.location.href,
           document.title,
           document.body.innerText,
           video?.currentTime ?? 0
-        ) as MediaContext
-        if (ctx?.title || ctx?.tmdb_id) {
-          sendResponse({
-            title: ctx.title || "Detected",
-            tmdb_id: ctx.tmdb_id,
-            type: ctx.type,
-            season: ctx.season,
-            episode: ctx.episode,
-            currentTime:
-              typeof currentTime === "number" ? currentTime : undefined
+        )
+          .then((ctx) => {
+            if (ctx?.title || ctx?.tmdb_id || ctx?.imdb_id) {
+              sendResponse({
+                title: ctx.title || "Detected",
+                tmdb_id: ctx.tmdb_id,
+                type: ctx.type,
+                season: ctx.season,
+                episode: ctx.episode,
+                currentTime:
+                  typeof currentTime === "number" ? currentTime : undefined
+              })
+            } else {
+              sendResponse(null)
+            }
           })
-        } else {
-          sendResponse(null)
-        }
+          .catch(() => {
+            sendResponse(null)
+          })
       }
       return true
     }

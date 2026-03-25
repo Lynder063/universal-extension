@@ -27,12 +27,12 @@ export function matchHBOMax(url: string): boolean {
   return MAX_URL.test(url)
 }
 
-export function extractHBOMax(
+export async function extractHBOMax(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const pageTitle = cleanTitle(documentTitle)
   const { season, episode } = parseSeasonEpisodeFromBody(bodyText)
 

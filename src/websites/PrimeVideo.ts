@@ -28,12 +28,12 @@ export function matchPrimeVideo(url: string): boolean {
   return PRIME_VIDEO_URL.test(url)
 }
 
-export function extractPrimeVideo(
+export async function extractPrimeVideo(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const title = cleanTitle(documentTitle)
   const pathname = new URL(url, "https://primevideo.com").pathname
   const { season, episode } = parseSeasonEpisodeFromBody(bodyText)

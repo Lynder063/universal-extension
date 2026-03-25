@@ -31,12 +31,12 @@ export function matchAppleTV(url: string): boolean {
   return APPLE_TV_URL.test(url)
 }
 
-export function extractAppleTV(
+export async function extractAppleTV(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const title = cleanTitle(documentTitle)
   const { season, episode } = parseSubtitleForSeasonEpisode(bodyText)
   return {

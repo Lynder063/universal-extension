@@ -26,12 +26,12 @@ export function matchPlex(url: string): boolean {
   return PLEX_URL.test(url)
 }
 
-export function extractPlex(
+export async function extractPlex(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const title = cleanTitle(documentTitle)
   const { href } = new URL(url, "https://app.plex.tv")
   const { season, episode } = parseSeasonEpisodeFromBody(bodyText)

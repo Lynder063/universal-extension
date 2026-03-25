@@ -30,6 +30,7 @@ interface DiscoveryResult {
 
 interface DiscoveryRequest {
   tmdb_id?: number
+  imdb_id?: string
   title?: string
   isTV?: boolean
   season?: number
@@ -53,6 +54,20 @@ async function handleDiscovery(
 ): Promise<DiscoveryResult> {
   try {
     let tmdbId = data.tmdb_id
+
+    if (!tmdbId && data.imdb_id) {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/find/${data.imdb_id}?external_source=imdb_id`,
+        { headers: tmdbHeaders }
+      )
+      if (res.ok) {
+        const findData = await res.json()
+        const result = findData.movie_results?.[0] || findData.tv_results?.[0]
+        if (result) {
+          tmdbId = result.id
+        }
+      }
+    }
 
     if (!tmdbId && data.title && data.title.length > 2) {
       const type = data.isTV ? "tv" : "movie"

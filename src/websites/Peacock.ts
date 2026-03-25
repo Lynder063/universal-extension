@@ -26,12 +26,12 @@ export function matchPeacock(url: string): boolean {
   return PEACOCK_URL.test(url)
 }
 
-export function extractPeacock(
+export async function extractPeacock(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const title = cleanTitle(documentTitle)
   const pathname = new URL(url, "https://peacocktv.com").pathname
   const isPlayback =

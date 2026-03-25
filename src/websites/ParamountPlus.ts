@@ -26,12 +26,12 @@ export function matchParamountPlus(url: string): boolean {
   return PARAMOUNT_URL.test(url)
 }
 
-export function extractParamountPlus(
+export async function extractParamountPlus(
   url: string,
   documentTitle: string,
   bodyText: string,
   currentTime = 0
-): MediaContext {
+): Promise<MediaContext> {
   const title = cleanTitle(documentTitle)
   const pathname = new URL(url, "https://paramountplus.com").pathname
   const isShowsVideo = /\/shows\/.+\/video\//i.test(pathname)
