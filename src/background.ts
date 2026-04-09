@@ -3,6 +3,7 @@ export {}
 const TMDB_TOKEN = process.env.PLASMO_PUBLIC_TMDB_TOKEN
 const INTRODB_API =
   process.env.PLASMO_PUBLIC_INTRODB_API || "https://api.theintrodb.org/v2"
+const INTRODB_USER_AGENT = "TheIntroDB Universal Extension"
 
 interface TMDBResult {
   id: number
@@ -110,7 +111,11 @@ async function handleDiscovery(
       "introdb_api_key"
     ])
 
-    const headers: HeadersInit = { Accept: "application/json" }
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "User-Agent": INTRODB_USER_AGENT,
+      "X-User-Agent": INTRODB_USER_AGENT
+    }
     if (introdb_api_key) {
       headers.Authorization = `Bearer ${introdb_api_key}`
     }
