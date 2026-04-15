@@ -56,6 +56,7 @@ let playerPollId: ReturnType<typeof setInterval> | null = null
 let domObserver: MutationObserver | null = null
 let lastLookupKey: string | null = null
 let activeMediaKey: string | null = null
+let inFlightMediaKey: string | null = null
 let suppressUntilMs = 0
 
 // Monitor for URL changes to reset retry counter
@@ -95,6 +96,7 @@ function clearMediaState() {
   activeTimestamps = null
   lastPlayerInfo = null
   activeMediaKey = null
+  inFlightMediaKey = null
 }
 
 function resetPageState() {
@@ -353,12 +355,12 @@ async function init() {
       return
     }
 
-    if (mediaKey === lastLookupKey) {
+    if (inFlightMediaKey === mediaKey) {
       return
     }
 
-    lastLookupKey = mediaKey
     resetPageState()
+    inFlightMediaKey = mediaKey
 
     const res = (await chrome.runtime.sendMessage({
       action: "resolveAndFetch",
@@ -367,6 +369,7 @@ async function init() {
         isTV: ctx.type === "tv"
       }
     })) as IntroResponse
+    inFlightMediaKey = null
 
     console.log("TIDB API Response:", res)
 
@@ -392,12 +395,15 @@ async function init() {
       activeMediaKey = mediaKey
       // Reset retry counter on successful data retrieval
       retryCount = 0
+      suppressUntilMs = 0
       monitorPlayback()
     } else if (res?.status === "rate_limited") {
+      suppressUntilMs = Date.now() + 60000
       chrome.storage.local.set({
         error: { type: "rate_limited", reset: res.reset, time: Date.now() }
       })
     } else if (res?.status === "api_unreachable") {
+      suppressUntilMs = Date.now() + 60000
       chrome.storage.local.set({
         error: { type: "api_unreachable", time: Date.now() }
       })
@@ -407,6 +413,7 @@ async function init() {
         console.log(
           `No segments found, retry attempt ${retryCount}/${MAX_RETRIES}`
         )
+        suppressUntilMs = Date.now() + 5000
         setTimeout(init, 5000)
       } else {
         console.log(
@@ -416,6 +423,9 @@ async function init() {
       }
     }
   } finally {
+    if (inFlightMediaKey) {
+      inFlightMediaKey = null
+    }
     initRunning = false
   }
 }
