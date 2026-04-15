@@ -3,7 +3,7 @@ export {}
 const TMDB_TOKEN = process.env.PLASMO_PUBLIC_TMDB_TOKEN
 const INTRODB_API =
   process.env.PLASMO_PUBLIC_INTRODB_API || "https://api.theintrodb.org/v2"
-const INTRODB_USER_AGENT = "TheIntroDB Universal Extension"
+const INTRODB_USER_AGENT = "TheIntroDB Universal Extension/1.0"
 
 interface TMDBResult {
   id: number
