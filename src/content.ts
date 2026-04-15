@@ -55,6 +55,7 @@ let initScheduledId: ReturnType<typeof setTimeout> | null = null
 let playerPollId: ReturnType<typeof setInterval> | null = null
 let domObserver: MutationObserver | null = null
 let lastLookupKey: string | null = null
+let suppressUntilMs = 0
 
 // Monitor for URL changes to reset retry counter
 function monitorUrlChanges() {
@@ -63,13 +64,9 @@ function monitorUrlChanges() {
       console.log("URL changed, resetting retry counter")
       lastUrl = window.location.href
       retryCount = 0
-      activeTimestamps = null
-      lastPlayerInfo = null
+      suppressUntilMs = 0
+      resetPageState()
       lastLookupKey = null
-      if (skipBtn) {
-        skipBtn.remove()
-        skipBtn = null
-      }
       scheduleInit(1200)
     }
   }, 1000)
@@ -85,9 +82,55 @@ function scheduleInit(delayMs = 800) {
   }, delayMs)
 }
 
+function clearSkipButton() {
+  if (skipBtn) {
+    skipBtn.remove()
+    skipBtn = null
+  }
+}
+
+function clearMediaState() {
+  activeTimestamps = null
+  lastPlayerInfo = null
+}
+
+function resetPageState() {
+  clearSkipButton()
+  clearMediaState()
+}
+
+function isInvalidDocumentTitle(title: string): boolean {
+  const invalidTitles = [
+    "page not found",
+    "404",
+    "error",
+    "loading...",
+    "redirecting...",
+    "unknown"
+  ]
+  const cleanTitle = title.trim().toLowerCase()
+  return invalidTitles.some((invalid) => cleanTitle.includes(invalid))
+}
+
+function hasExternalIds(ctx: MediaContext): boolean {
+  return !!(ctx?.tmdb_id || ctx?.imdb_id)
+}
+
+function makeLookupKey(ctx: MediaContext): string {
+  return [
+    ctx.type,
+    ctx.tmdb_id ?? "",
+    ctx.imdb_id ?? "",
+    ctx.season ?? "",
+    ctx.episode ?? "",
+    ctx.title ?? ""
+  ].join("|")
+}
+
 function startPlayerMonitors() {
   if (!playerPollId) {
     playerPollId = setInterval(() => {
+      if (Date.now() < suppressUntilMs) return
       const hasVideo = !!document.querySelector("video")
       if (!hasVideo) return
       if (!activeTimestamps || !lastPlayerInfo) {
@@ -98,6 +141,7 @@ function startPlayerMonitors() {
 
   if (!domObserver) {
     domObserver = new MutationObserver(() => {
+      if (Date.now() < suppressUntilMs) return
       const hasVideo = !!document.querySelector("video")
       if (!hasVideo) return
       if (!activeTimestamps || !lastPlayerInfo) {
@@ -240,6 +284,7 @@ function monitorPlayback() {
 
 async function init() {
   if (initRunning) return
+  if (Date.now() < suppressUntilMs) return
   initRunning = true
   try {
     const { disabled_sites } = await chrome.storage.local.get([
@@ -261,25 +306,11 @@ async function init() {
     const video = getActiveVideo()
     if (!video) {
       console.log("No HTML video element detected; skipping TIDB lookup")
-      activeTimestamps = null
-      lastPlayerInfo = null
-      if (skipBtn) {
-        skipBtn.remove()
-        skipBtn = null
-      }
+      resetPageState()
       return
     }
 
-    // Skip if the page title indicates an error or not found page
-    const invalidTitles = [
-      "page not found",
-      "404",
-      "error",
-      "loading...",
-      "redirecting..."
-    ]
-    const cleanTitle = document.title.trim().toLowerCase()
-    if (invalidTitles.some((invalid) => cleanTitle.includes(invalid))) {
+    if (isInvalidDocumentTitle(document.title)) {
       console.log("Skipping invalid page title:", document.title)
       if (retryCount < MAX_RETRIES) {
         retryCount++
@@ -289,6 +320,7 @@ async function init() {
         setTimeout(init, 3000) // Retry in 3 seconds
       } else {
         console.log("Max retries reached for invalid title, stopping attempts")
+        suppressUntilMs = Date.now() + 60000
       }
       return
     }
@@ -300,29 +332,22 @@ async function init() {
       video?.currentTime ?? 0
     )) as MediaContext
 
-    const lookupKey = [
-      ctx.type,
-      ctx.tmdb_id ?? "",
-      ctx.imdb_id ?? "",
-      ctx.season ?? "",
-      ctx.episode ?? "",
-      ctx.title ?? ""
-    ].join("|")
+    const lookupKey = makeLookupKey(ctx)
 
-    if (lookupKey === lastLookupKey && !activeTimestamps && !lastPlayerInfo) {
+    if (lookupKey === lastLookupKey) {
+      if (activeTimestamps && lastPlayerInfo) {
+        monitorPlayback()
+      }
       return
     }
 
-    if (!ctx?.tmdb_id && !ctx?.imdb_id) {
-      console.log(
-        "Skipping TIDB lookup: media is missing TMDB ID and IMDb ID"
-      )
+    if (activeTimestamps || lastPlayerInfo || skipBtn) {
+      resetPageState()
+    }
+
+    if (!hasExternalIds(ctx)) {
+      console.log("Skipping TIDB lookup: media is missing TMDB ID and IMDb ID")
       lastLookupKey = lookupKey
-      return
-    }
-
-    if (lookupKey === lastLookupKey && activeTimestamps && lastPlayerInfo) {
-      monitorPlayback()
       return
     }
 
@@ -378,6 +403,7 @@ async function init() {
         console.log(
           "Max retries reached for finding segments, stopping attempts"
         )
+        suppressUntilMs = Date.now() + 60000
       }
     }
   } finally {
