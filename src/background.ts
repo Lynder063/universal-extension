@@ -174,6 +174,11 @@ async function handleDiscovery(
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "resolveAndFetch" && request.data) {
+    const { tmdb_id, imdb_id } = request.data as DiscoveryRequest
+    if (!tmdb_id && !imdb_id) {
+      sendResponse({ status: "not_found", reason: "missing_ids" })
+      return false
+    }
     handleDiscovery(request.data).then(sendResponse)
     return true
   } else if (request.action === "fetchNetflixMetadata" && request.netflixId) {

@@ -260,7 +260,7 @@ async function init() {
 
     const video = getActiveVideo()
     if (!video) {
-      console.log("No HTML video element detected; skipping IntroDB lookup")
+      console.log("No HTML video element detected; skipping TIDB lookup")
       activeTimestamps = null
       lastPlayerInfo = null
       if (skipBtn) {
@@ -300,24 +300,6 @@ async function init() {
       video?.currentTime ?? 0
     )) as MediaContext
 
-    if (!ctx?.title && !ctx?.tmdb_id && !ctx?.imdb_id) {
-      console.log(
-        "No valid media context found (no title, TMDB ID, or IMDb ID)"
-      )
-      if (retryCount < MAX_RETRIES) {
-        retryCount++
-        console.log(
-          `Retry attempt ${retryCount}/${MAX_RETRIES} for missing media context`
-        )
-        setTimeout(init, 5000)
-      } else {
-        console.log(
-          "Max retries reached for missing media context, stopping attempts"
-        )
-      }
-      return
-    }
-
     const lookupKey = [
       ctx.type,
       ctx.tmdb_id ?? "",
@@ -326,6 +308,18 @@ async function init() {
       ctx.episode ?? "",
       ctx.title ?? ""
     ].join("|")
+
+    if (lookupKey === lastLookupKey && !activeTimestamps && !lastPlayerInfo) {
+      return
+    }
+
+    if (!ctx?.tmdb_id && !ctx?.imdb_id) {
+      console.log(
+        "Skipping TIDB lookup: media is missing TMDB ID and IMDb ID"
+      )
+      lastLookupKey = lookupKey
+      return
+    }
 
     if (lookupKey === lastLookupKey && activeTimestamps && lastPlayerInfo) {
       monitorPlayback()
@@ -340,7 +334,7 @@ async function init() {
       }
     })) as IntroResponse
 
-    console.log("IntroDB API Response:", res)
+    console.log("TIDB API Response:", res)
 
     if (res?.status === "success") {
       const data: Record<string, Segment[]> = {}
@@ -414,7 +408,7 @@ chrome.runtime.onMessage.addListener(
           video?.currentTime ?? 0
         )
           .then((ctx) => {
-            if (ctx?.title || ctx?.tmdb_id || ctx?.imdb_id) {
+            if (ctx?.tmdb_id || ctx?.imdb_id) {
               sendResponse({
                 title: lastPlayerInfo?.title || ctx.title || "Detected",
                 tmdb_id: ctx.tmdb_id,
@@ -426,7 +420,7 @@ chrome.runtime.onMessage.addListener(
                   typeof currentTime === "number" ? currentTime : undefined
               })
             } else {
-              sendResponse(null)
+              sendResponse({ available: false, reason: "missing_ids" })
             }
           })
           .catch(() => {
