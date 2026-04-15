@@ -50,6 +50,11 @@ let retryCount = 0
 const MAX_RETRIES = 3
 let lastUrl = window.location.href
 let urlMonitoringStarted = false
+let initRunning = false
+let initScheduledId: ReturnType<typeof setTimeout> | null = null
+let playerPollId: ReturnType<typeof setInterval> | null = null
+let domObserver: MutationObserver | null = null
+let lastLookupKey: string | null = null
 
 // Monitor for URL changes to reset retry counter
 function monitorUrlChanges() {
@@ -58,8 +63,53 @@ function monitorUrlChanges() {
       console.log("URL changed, resetting retry counter")
       lastUrl = window.location.href
       retryCount = 0
+      activeTimestamps = null
+      lastPlayerInfo = null
+      lastLookupKey = null
+      if (skipBtn) {
+        skipBtn.remove()
+        skipBtn = null
+      }
+      scheduleInit(1200)
     }
   }, 1000)
+}
+
+function scheduleInit(delayMs = 800) {
+  if (initScheduledId) clearTimeout(initScheduledId)
+  initScheduledId = setTimeout(() => {
+    initScheduledId = null
+    if (!initRunning) {
+      init()
+    }
+  }, delayMs)
+}
+
+function startPlayerMonitors() {
+  if (!playerPollId) {
+    playerPollId = setInterval(() => {
+      const hasVideo = !!document.querySelector("video")
+      if (!hasVideo) return
+      if (!activeTimestamps || !lastPlayerInfo) {
+        scheduleInit(0)
+      }
+    }, 10000)
+  }
+
+  if (!domObserver) {
+    domObserver = new MutationObserver(() => {
+      const hasVideo = !!document.querySelector("video")
+      if (!hasVideo) return
+      if (!activeTimestamps || !lastPlayerInfo) {
+        scheduleInit(400)
+      }
+    })
+
+    domObserver.observe(document.documentElement, {
+      subtree: true,
+      childList: true
+    })
+  }
 }
 
 async function recordSkip(type: string, durationMs: number) {
@@ -189,116 +239,155 @@ function monitorPlayback() {
 }
 
 async function init() {
-  const { disabled_sites } = await chrome.storage.local.get(["disabled_sites"])
-  const host = window.location.hostname.replace(/^www./, "")
-  if (Array.isArray(disabled_sites) && disabled_sites.includes(host)) {
-    return
-  }
-
-  // Start URL change monitoring on first init
-  if (!urlMonitoringStarted) {
-    monitorUrlChanges()
-    urlMonitoringStarted = true
-  }
-
-  const video = getActiveVideo()
-
-  // Skip if the page title indicates an error or not found page
-  const invalidTitles = [
-    "page not found",
-    "404",
-    "error",
-    "loading...",
-    "redirecting..."
-  ]
-  const cleanTitle = document.title.trim().toLowerCase()
-  if (invalidTitles.some((invalid) => cleanTitle.includes(invalid))) {
-    console.log("Skipping invalid page title:", document.title)
-    if (retryCount < MAX_RETRIES) {
-      retryCount++
-      console.log(
-        `Retry attempt ${retryCount}/${MAX_RETRIES} for invalid title`
-      )
-      setTimeout(init, 3000) // Retry in 3 seconds
-    } else {
-      console.log("Max retries reached for invalid title, stopping attempts")
+  if (initRunning) return
+  initRunning = true
+  try {
+    const { disabled_sites } = await chrome.storage.local.get([
+      "disabled_sites"
+    ])
+    const host = window.location.hostname.replace(/^www./, "")
+    if (Array.isArray(disabled_sites) && disabled_sites.includes(host)) {
+      return
     }
-    return
-  }
 
-  const ctx = (await extractMediaContext(
-    window.location.href,
-    document.title,
-    document.body.innerText,
-    video?.currentTime ?? 0
-  )) as MediaContext
-
-  if (!ctx?.title && !ctx?.tmdb_id && !ctx?.imdb_id) {
-    console.log("No valid media context found (no title, TMDB ID, or IMDb ID)")
-    if (retryCount < MAX_RETRIES) {
-      retryCount++
-      console.log(
-        `Retry attempt ${retryCount}/${MAX_RETRIES} for missing media context`
-      )
-      setTimeout(init, 5000)
-    } else {
-      console.log(
-        "Max retries reached for missing media context, stopping attempts"
-      )
+    // Start URL change monitoring on first init
+    if (!urlMonitoringStarted) {
+      monitorUrlChanges()
+      urlMonitoringStarted = true
     }
-    return
-  }
 
-  const res = (await chrome.runtime.sendMessage({
-    action: "resolveAndFetch",
-    data: {
-      ...ctx,
-      isTV: ctx.type === "tv"
-    }
-  })) as IntroResponse
+    startPlayerMonitors()
 
-  console.log("IntroDB API Response:", res)
-
-  if (res?.status === "success") {
-    const data: Record<string, Segment[]> = {}
-    const keys = ["intro", "recap", "credits", "preview"] as const
-
-    keys.forEach((k) => {
-      if (Array.isArray(res[k])) {
-        data[k] = res[k]!
+    const video = getActiveVideo()
+    if (!video) {
+      console.log("No HTML video element detected; skipping IntroDB lookup")
+      activeTimestamps = null
+      lastPlayerInfo = null
+      if (skipBtn) {
+        skipBtn.remove()
+        skipBtn = null
       }
-    })
+      return
+    }
 
-    console.log("Parsed segments:", data)
-    activeTimestamps = data
-    lastPlayerInfo = {
-      title: res.title || ctx.title || "Detected",
-      tmdb_id: res.tmdb_id ?? ctx.tmdb_id,
-      type: ctx.type,
-      season: ctx.season,
-      episode: ctx.episode
+    // Skip if the page title indicates an error or not found page
+    const invalidTitles = [
+      "page not found",
+      "404",
+      "error",
+      "loading...",
+      "redirecting..."
+    ]
+    const cleanTitle = document.title.trim().toLowerCase()
+    if (invalidTitles.some((invalid) => cleanTitle.includes(invalid))) {
+      console.log("Skipping invalid page title:", document.title)
+      if (retryCount < MAX_RETRIES) {
+        retryCount++
+        console.log(
+          `Retry attempt ${retryCount}/${MAX_RETRIES} for invalid title`
+        )
+        setTimeout(init, 3000) // Retry in 3 seconds
+      } else {
+        console.log("Max retries reached for invalid title, stopping attempts")
+      }
+      return
     }
-    // Reset retry counter on successful data retrieval
-    retryCount = 0
-    monitorPlayback()
-  } else if (res?.status === "rate_limited") {
-    chrome.storage.local.set({
-      error: { type: "rate_limited", reset: res.reset, time: Date.now() }
-    })
-  } else if (res?.status === "api_unreachable") {
-    chrome.storage.local.set({
-      error: { type: "api_unreachable", time: Date.now() }
-    })
-  } else if (!activeTimestamps) {
-    if (retryCount < MAX_RETRIES) {
-      retryCount++
+
+    const ctx = (await extractMediaContext(
+      window.location.href,
+      document.title,
+      document.body.innerText,
+      video?.currentTime ?? 0
+    )) as MediaContext
+
+    if (!ctx?.title && !ctx?.tmdb_id && !ctx?.imdb_id) {
       console.log(
-        `No segments found, retry attempt ${retryCount}/${MAX_RETRIES}`
+        "No valid media context found (no title, TMDB ID, or IMDb ID)"
       )
-      setTimeout(init, 5000)
-    } else {
-      console.log("Max retries reached for finding segments, stopping attempts")
+      if (retryCount < MAX_RETRIES) {
+        retryCount++
+        console.log(
+          `Retry attempt ${retryCount}/${MAX_RETRIES} for missing media context`
+        )
+        setTimeout(init, 5000)
+      } else {
+        console.log(
+          "Max retries reached for missing media context, stopping attempts"
+        )
+      }
+      return
     }
+
+    const lookupKey = [
+      ctx.type,
+      ctx.tmdb_id ?? "",
+      ctx.imdb_id ?? "",
+      ctx.season ?? "",
+      ctx.episode ?? "",
+      ctx.title ?? ""
+    ].join("|")
+
+    if (lookupKey === lastLookupKey && activeTimestamps && lastPlayerInfo) {
+      monitorPlayback()
+      return
+    }
+
+    const res = (await chrome.runtime.sendMessage({
+      action: "resolveAndFetch",
+      data: {
+        ...ctx,
+        isTV: ctx.type === "tv"
+      }
+    })) as IntroResponse
+
+    console.log("IntroDB API Response:", res)
+
+    if (res?.status === "success") {
+      const data: Record<string, Segment[]> = {}
+      const keys = ["intro", "recap", "credits", "preview"] as const
+
+      keys.forEach((k) => {
+        if (Array.isArray(res[k])) {
+          data[k] = res[k]!
+        }
+      })
+
+      console.log("Parsed segments:", data)
+      activeTimestamps = data
+      lastPlayerInfo = {
+        title: res.title || ctx.title || "Detected",
+        tmdb_id: res.tmdb_id ?? ctx.tmdb_id,
+        type: ctx.type,
+        season: ctx.season,
+        episode: ctx.episode
+      }
+      lastLookupKey = lookupKey
+      // Reset retry counter on successful data retrieval
+      retryCount = 0
+      monitorPlayback()
+    } else if (res?.status === "rate_limited") {
+      chrome.storage.local.set({
+        error: { type: "rate_limited", reset: res.reset, time: Date.now() }
+      })
+    } else if (res?.status === "api_unreachable") {
+      chrome.storage.local.set({
+        error: { type: "api_unreachable", time: Date.now() }
+      })
+    } else if (!activeTimestamps) {
+      if (retryCount < MAX_RETRIES) {
+        retryCount++
+        console.log(
+          `No segments found, retry attempt ${retryCount}/${MAX_RETRIES}`
+        )
+        setTimeout(init, 5000)
+      } else {
+        console.log(
+          "Max retries reached for finding segments, stopping attempts"
+        )
+      }
+    }
+  } finally {
+    initRunning = false
   }
 }
 
@@ -306,10 +395,15 @@ chrome.runtime.onMessage.addListener(
   (msg: { action: string }, _sender, sendResponse: (r: unknown) => void) => {
     if (msg.action === "getPlayerInfo") {
       const video = getActiveVideo()
+      if (!video) {
+        sendResponse({ available: false, reason: "no_video" })
+        return false
+      }
       const currentTime = video ? video.currentTime : undefined
       if (lastPlayerInfo) {
         sendResponse({
           ...lastPlayerInfo,
+          available: true,
           currentTime: typeof currentTime === "number" ? currentTime : undefined
         })
       } else {
@@ -327,6 +421,7 @@ chrome.runtime.onMessage.addListener(
                 type: ctx.type,
                 season: ctx.season,
                 episode: ctx.episode,
+                available: true,
                 currentTime:
                   typeof currentTime === "number" ? currentTime : undefined
               })

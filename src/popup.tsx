@@ -43,8 +43,9 @@ function IndexPopup() {
         setMediaTitle("Refresh page to sync")
         return
       }
-      if (!response) {
-        setMediaTitle("No Video Detected")
+      if (!response || response.available === false) {
+        setMediaTitle("Not available on this page")
+        setMediaMeta("No HTML video player detected")
         return
       }
       setTmdbId(String(response.tmdb_id || ""))
@@ -90,6 +91,14 @@ function IndexPopup() {
         }
       })
   }, [loadPlayerInfo])
+
+  useEffect(() => {
+    if (view !== "main") return
+    const id = setInterval(() => {
+      loadPlayerInfo()
+    }, 5000)
+    return () => clearInterval(id)
+  }, [view, loadPlayerInfo])
 
   useEffect(() => {
     if (view === "setup") {
