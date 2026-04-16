@@ -102,6 +102,18 @@ async function handleDiscovery(
 
     if (!tmdbId) return { status: "not_found" }
 
+    if (!tmdbResult) {
+      const type = data.isTV ? "tv" : "movie"
+      const res = await fetch(
+        `https://api.themoviedb.org/3/${type}/${tmdbId}`,
+        {
+          headers: tmdbHeaders
+        }
+      )
+      if (!res.ok) return { status: "not_found" }
+      tmdbResult = await res.json()
+    }
+
     const sNum = data.season ?? 1
     const eNum = data.episode ?? 1
 
