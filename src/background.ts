@@ -184,10 +184,10 @@ async function handleDiscovery(
   }
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === "resolveAndFetch" && request.data) {
-    const { tmdb_id, imdb_id } = request.data as DiscoveryRequest
-    if (!tmdb_id && !imdb_id) {
+    const { tmdb_id, imdb_id, title } = request.data as DiscoveryRequest
+    if (!tmdb_id && !imdb_id && !title) {
       sendResponse({ status: "not_found", reason: "missing_ids" })
       return false
     }

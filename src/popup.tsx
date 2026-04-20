@@ -22,6 +22,7 @@ type PlayerInfoResponse = null | {
   season?: number
   episode?: number
   currentTime?: number
+  playerAvailable?: boolean
 }
 
 function IndexPopup() {
@@ -38,6 +39,7 @@ function IndexPopup() {
   const [segment, setSegment] = useState<SegmentType>("intro")
   const [status, setStatus] = useState("")
   const [statusColor, setStatusColor] = useState("")
+  const [notice, setNotice] = useState("")
   const [setupPageKey, setSetupPageKey] = useState("")
   const [errorMessage, setErrorMessage] = useState(null)
   const startSecRef = useRef(startSec)
@@ -63,10 +65,16 @@ function IndexPopup() {
           return
         }
         if (!response || response.available === false) {
+          setNotice("")
           setMediaTitle(t("errors.notAvailableOnThisPage"))
           setMediaMeta(t("errors.noHtmlVideoPlayerDetected"))
           return
         }
+        setNotice(
+          response.playerAvailable === false
+            ? t("popup.skippingUnavailableMediaFound")
+            : ""
+        )
         setTmdbId(String(response.tmdb_id || ""))
         setMediaType(response.type || "movie")
         const currentTimeSec =
@@ -290,6 +298,7 @@ function IndexPopup() {
             )}
             {view === "main" && (
               <MainPage
+                notice={notice}
                 mediaTitle={mediaTitle}
                 mediaMeta={mediaMeta}
                 segment={segment}

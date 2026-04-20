@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 export type SegmentType = "intro" | "recap" | "credits" | "preview"
 
 export interface MainPageProps {
+  notice: string
   mediaTitle: string
   mediaMeta: string
   segment: SegmentType
@@ -20,6 +21,7 @@ export interface MainPageProps {
 }
 
 export function MainPage({
+  notice,
   mediaTitle,
   mediaMeta,
   segment,
@@ -42,6 +44,11 @@ export function MainPage({
       <h3 className="text-green-400 border-b border-gray-700 pb-2.5">
         {t("popup.title")}
       </h3>
+      {notice && (
+        <div className="mt-3 mb-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[10px] text-amber-200">
+          {notice}
+        </div>
+      )}
       <div className="box-border text-xs font-medium mb-1 border-l-[3px] border-green-400 p-1 pl-2.5 bg-gradient-to-r from-green-400/10 to-transparent overflow-hidden text-ellipsis whitespace-nowrap">
         {mediaTitle}
       </div>

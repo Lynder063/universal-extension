@@ -26,7 +26,8 @@
     "enabled": "Włączone",
     "disabled": "Wyłączone",
     "on": "na",
-    "github": "GitHub"
+    "github": "GitHub",
+    "skippingUnavailableMediaFound": "Pomijanie nie jest tutaj dostępne, ale multimedia zostały znalezione i nadal możesz ręcznie przesłać segmenty."
   },
   "content": {
     "skipButton": {

@@ -37,6 +37,24 @@ interface MediaContext {
   year?: string
 }
 
+interface PlayerInfoMessage {
+  available: boolean
+  reason?: string
+  title?: string
+  tmdb_id?: number
+  type?: "tv" | "movie"
+  season?: number
+  episode?: number
+  currentTime?: number
+  playerAvailable?: boolean
+}
+
+interface DiscoveryResponse {
+  status?: string
+  tmdb_id?: number
+  title?: string
+}
+
 let activeTimestamps: Record<string, Segment[]> | null = null
 let skipBtn: HTMLButtonElement | null = null
 let playbackIntervalId: ReturnType<typeof setInterval> | null = null
@@ -435,17 +453,15 @@ chrome.runtime.onMessage.addListener(
   (msg: { action: string }, _sender, sendResponse: (r: unknown) => void) => {
     if (msg.action === "getPlayerInfo") {
       const video = getActiveVideo()
-      if (!video) {
-        sendResponse({ available: false, reason: "no_video" })
-        return false
-      }
-      const currentTime = video ? video.currentTime : undefined
+      const currentTime = video?.currentTime
       if (lastPlayerInfo) {
-        sendResponse({
+        const response: PlayerInfoMessage = {
           ...lastPlayerInfo,
           available: true,
+          playerAvailable: Boolean(video),
           currentTime: typeof currentTime === "number" ? currentTime : undefined
-        })
+        }
+        sendResponse(response)
       } else {
         extractMediaContext(
           window.location.href,
@@ -453,18 +469,37 @@ chrome.runtime.onMessage.addListener(
           document.body.innerText,
           video?.currentTime ?? 0
         )
-          .then((ctx) => {
-            if (ctx?.tmdb_id || ctx?.imdb_id) {
-              sendResponse({
-                title: lastPlayerInfo?.title || ctx.title || "Detected",
-                tmdb_id: ctx.tmdb_id,
+          .then(async (ctx) => {
+            let resolvedTmdbId = ctx?.tmdb_id
+            let resolvedTitle = lastPlayerInfo?.title || ctx.title || "Detected"
+
+            if (ctx && !resolvedTmdbId && !ctx.imdb_id && ctx.title) {
+              const discovery = (await chrome.runtime.sendMessage({
+                action: "resolveAndFetch",
+                data: {
+                  ...ctx,
+                  isTV: ctx.type === "tv"
+                }
+              })) as DiscoveryResponse
+
+              if (discovery?.tmdb_id) resolvedTmdbId = discovery.tmdb_id
+              if (discovery?.title) resolvedTitle = discovery.title
+            }
+
+            if (resolvedTmdbId || ctx?.imdb_id) {
+              const response: PlayerInfoMessage = {
+                title: resolvedTitle,
+                tmdb_id: resolvedTmdbId,
                 type: ctx.type,
                 season: ctx.season,
                 episode: ctx.episode,
                 available: true,
+                playerAvailable: Boolean(video),
+                reason: video ? undefined : "no_video",
                 currentTime:
                   typeof currentTime === "number" ? currentTime : undefined
-              })
+              }
+              sendResponse(response)
             } else {
               sendResponse({ available: false, reason: "missing_ids" })
             }
