@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { api } from "./api"
 
 import "~style.css"
 
 export function Footer() {
+  const { t } = useTranslation()
   const version = api.runtime.getManifest().version ?? "0.0.0"
   const [isEnabled, setIsEnabled] = useState(true)
   const [hostname, setHostname] = useState("")
@@ -43,7 +45,8 @@ export function Footer() {
         v{version}
       </span>
       <label className="flex items-center text-xs text-gray-400">
-        {isEnabled ? "Enabled" : "Disabled"} on {hostname}
+        {isEnabled ? t("popup.enabled") : t("popup.disabled")} {t("popup.on")}{" "}
+        {hostname}
         <input
           type="checkbox"
           checked={isEnabled}
@@ -56,7 +59,7 @@ export function Footer() {
         target="_blank"
         rel="noopener noreferrer"
         className="inline-block text-xs text-gray-400 no-underline transition-colors duration-200 hover:text-gray-300">
-        Github
+        {t("popup.github")}
       </a>
     </div>
   )

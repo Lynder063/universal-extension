@@ -1,6 +1,8 @@
 import "~style.css"
+import "~/i18n/config"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import smallLogo from "url:../assets/small-logo.svg"
 
 import { api, API_URL } from "./popup/api"
@@ -23,6 +25,7 @@ type PlayerInfoResponse = null | {
 }
 
 function IndexPopup() {
+  const { t } = useTranslation()
   const [view, setView] = useState<"setup" | "main" | "stats">("setup")
   const [mediaTitle, setMediaTitle] = useState("Detecting...")
   const [mediaMeta, setMediaMeta] = useState("Initializing")
@@ -48,7 +51,7 @@ function IndexPopup() {
       tab.url?.startsWith("about:") ||
       tab.url?.startsWith("moz-extension://")
     ) {
-      setMediaTitle("Cannot run on this page")
+      setMediaTitle(t("errors.cannotRunOnThisPage"))
       return
     }
     api.tabs.sendMessage(
@@ -56,12 +59,12 @@ function IndexPopup() {
       { action: "getPlayerInfo" },
       (response: PlayerInfoResponse) => {
         if (api.runtime.lastError) {
-          setMediaTitle("Refresh page to sync")
+          setMediaTitle(t("errors.refreshPageToSync"))
           return
         }
         if (!response || response.available === false) {
-          setMediaTitle("Not available on this page")
-          setMediaMeta("No HTML video player detected")
+          setMediaTitle(t("errors.notAvailableOnThisPage"))
+          setMediaMeta(t("errors.noHtmlVideoPlayerDetected"))
           return
         }
         setTmdbId(String(response.tmdb_id || ""))
@@ -77,15 +80,15 @@ function IndexPopup() {
           setEpisode(String(response.episode ?? ""))
           setMediaMeta(
             response.season && response.episode
-              ? `Season ${response.season} - Episode ${response.episode}`
-              : "TV Series"
+              ? `${t("media.season")} ${response.season} - ${t("media.episode")} ${response.episode}`
+              : t("media.tvSeries")
           )
         } else {
-          setMediaMeta("Feature Film")
+          setMediaMeta(t("media.featureFilm"))
         }
       }
     )
-  }, [])
+  }, [t])
 
   useEffect(() => {
     startSecRef.current = startSec
@@ -99,9 +102,9 @@ function IndexPopup() {
           // Only show recent errors (1 minute)
           if (error.type === "rate_limited") {
             const timeString = formatSeconds(error.reset)
-            setErrorMessage(`Usage limit reached. Try again in ${timeString}.`)
+            setErrorMessage(t("errors.rateLimited", { timeString }))
           } else if (error.type === "api_unreachable") {
-            setErrorMessage("API is unreachable. Please try again later.")
+            setErrorMessage(t("errors.apiUnreachable"))
           }
           api.storage.local.remove("error")
         }
@@ -111,7 +114,7 @@ function IndexPopup() {
           loadPlayerInfo()
         }
       })
-  }, [loadPlayerInfo])
+  }, [loadPlayerInfo, t])
 
   useEffect(() => {
     if (view !== "main") return
@@ -119,7 +122,7 @@ function IndexPopup() {
       loadPlayerInfo()
     }, 5000)
     return () => clearInterval(id)
-  }, [view, loadPlayerInfo])
+  }, [view, loadPlayerInfo, t])
 
   useEffect(() => {
     if (view === "setup") {
@@ -164,7 +167,7 @@ function IndexPopup() {
       payload.season = Number(season)
       payload.episode = Number(episode)
     }
-    setStatus("Submitting...")
+    setStatus(t("status.submitting"))
     try {
       const res = await fetch(`${API_URL}/submit`, {
         method: "POST",
@@ -175,7 +178,7 @@ function IndexPopup() {
         body: JSON.stringify(payload)
       })
       if (res.ok) {
-        setStatus("Submitted successfully")
+        setStatus(t("status.submittedSuccessfully"))
         setStatusColor("text-green-400")
       } else {
         const errData = await res.json().catch(() => ({}))
@@ -183,11 +186,11 @@ function IndexPopup() {
           typeof errData?.error === "string"
             ? errData.error
             : errData?.message ?? "Failed"
-        setStatus(`${msg}`)
+        setStatus(msg)
         setStatusColor("text-red-500")
       }
     } catch {
-      setStatus("Connection failed")
+      setStatus(t("status.connectionFailed"))
       setStatusColor("text-red-500")
     }
   }
@@ -259,13 +262,13 @@ function IndexPopup() {
                   <button
                     onClick={goToMain}
                     className="liquid-glass-button back-button text-sm py-1.5 px-3">
-                    &larr; Back
+                    &larr; {t("navigation.back")}
                   </button>
                 ) : (
                   <button
                     onClick={goToStats}
                     className="liquid-glass-button text-base font-bold">
-                    Stats
+                    {t("navigation.stats")}
                   </button>
                 )}
               </>
@@ -274,11 +277,10 @@ function IndexPopup() {
 
           {view === "setup" && (
             <p className="block text-xs text-gray-400 font-bold mb-3.5">
-              You&apos;re getting skip segments from TheIntroDB!
+              {t("setup.description1")}
               <br />
               <br />
-              Optionally, you can enter your API key to submit new segments and
-              skip using your still pending segments!
+              {t("setup.description2")}
             </p>
           )}
 

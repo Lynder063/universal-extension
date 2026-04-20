@@ -1,0 +1,79 @@
+{
+  "popup": {
+    "title": "Submit",
+    "segment": "Segment",
+    "time": "Time (MM:SS)",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "insertCurrentTime": "Insert current time",
+    "submit": "Submit",
+    "disconnectToken": "Disconnect Token",
+    "apiKey": "API Key",
+    "enterApiKey": "Enter your API key",
+    "authorize": "Authorize",
+    "yourStatistics": "Your Statistics",
+    "personalTimeSaved": "Personal Time Saved",
+    "segmentsSkipped": "Segments Skipped",
+    "yourSubmissions": "Your Submissions",
+    "total": "Total",
+    "accepted": "Accepted",
+    "pending": "Pending",
+    "acceptanceRate": "Acceptance rate",
+    "currentStreak": "Current streak",
+    "bestStreak": "Best streak",
+    "communitySubmissions": "Community Submissions",
+    "loading": "Loading...",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "on": "on",
+    "github": "Github"
+  },
+  "content": {
+    "skipButton": {
+      "intro": "SKIP INTRO",
+      "recap": "SKIP RECAP",
+      "credits": "SKIP CREDITS",
+      "preview": "SKIP PREVIEW"
+    }
+  },
+  "errors": {
+    "apiKeyNotAccepted": "API key not accepted. Check or regenerate key at theintrodb.org",
+    "couldNotLoadAccountStats": "Could not load account stats. Try again later.",
+    "rateLimited": "Usage limit reached. Try again in {{timeString}}.",
+    "apiUnreachable": "API is unreachable. Please try again later.",
+    "cannotRunOnThisPage": "Cannot run on this page",
+    "refreshPageToSync": "Refresh page to sync",
+    "notAvailableOnThisPage": "Not available on this page",
+    "noHtmlVideoPlayerDetected": "No HTML video player detected"
+  },
+  "segments": {
+    "intro": "Intro",
+    "recap": "Recap",
+    "credits": "Credits",
+    "preview": "Preview"
+  },
+  "time": {
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s"
+  },
+  "status": {
+    "submitting": "Submitting...",
+    "submittedSuccessfully": "Submitted successfully",
+    "connectionFailed": "Connection failed"
+  },
+  "media": {
+    "season": "Season",
+    "episode": "Episode",
+    "tvSeries": "TV Series",
+    "featureFilm": "Feature Film"
+  },
+  "setup": {
+    "description1": "You're getting skip segments from TheIntroDB!",
+    "description2": "Optionally, you can enter your API key to submit new segments and skip using your still pending segments!"
+  },
+  "navigation": {
+    "back": "Back",
+    "stats": "Stats"
+  }
+}

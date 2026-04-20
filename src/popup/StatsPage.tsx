@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { api } from "./api"
 
@@ -26,6 +27,7 @@ const DEFAULT_STATS: StatsState = {
 }
 
 const StatsPage: React.FC = () => {
+  const { t } = useTranslation()
   const [stats, setStats] = useState<StatsState>(DEFAULT_STATS)
   const [loading, setLoading] = useState(true)
   const [apiKeyError, setApiKeyError] = useState<string | null>(null)
@@ -86,11 +88,9 @@ const StatsPage: React.FC = () => {
             const userData = await userRes.json().catch(() => ({}))
             if (!userRes.ok) {
               if (userRes.status === 401) {
-                setApiKeyError(
-                  "API key not accepted. Check or regenerate key at theintrodb.org"
-                )
+                setApiKeyError(t("errors.apiKeyNotAccepted"))
               } else {
-                setApiKeyError("Could not load account stats. Try again later.")
+                setApiKeyError(t("errors.couldNotLoadAccountStats"))
               }
             } else {
               const tsMs = userData.total_time_saved_ms
@@ -123,39 +123,43 @@ const StatsPage: React.FC = () => {
       }
     }
     loadStats()
-  }, [])
+  }, [t])
 
   const formatDuration = (ms: number) => {
     const seconds = Math.floor(ms / 1000)
     const m = Math.floor((seconds % 3600) / 60)
     const h = Math.floor(seconds / 3600)
     const s = seconds % 60
-    return `${h > 0 ? h + "h " : ""}${m > 0 ? m + "m " : ""}${s}s`
+    return `${h > 0 ? h + t("time.hours") + " " : ""}${m > 0 ? m + t("time.minutes") + " " : ""}${s}${t("time.seconds")}`
   }
 
   if (loading)
     return (
-      <div className="text-gray-400 text-center rounded-4xl">Loading...</div>
+      <div className="text-gray-400 text-center rounded-4xl">
+        {t("popup.loading")}
+      </div>
     )
 
   return (
     <div className="text-gray-200 font-sans">
       <h3 className="text-green-400 border-b border-gray-700">
-        Your Statistics
+        {t("popup.yourStatistics")}
       </h3>
 
       <div className="my-2.5">
-        <strong>Personal Time Saved:</strong>
+        <strong>{t("popup.personalTimeSaved")}:</strong>
         <span className="text-green-400 ml-2.5">
           {formatDuration(stats.total_time_saved_ms)}
         </span>
       </div>
 
       <div className="my-2.5">
-        <h4 className="m-0 mb-2.5 text-sm text-gray-400">Segments Skipped</h4>
+        <h4 className="m-0 mb-2.5 text-sm text-gray-400">
+          {t("popup.segmentsSkipped")}
+        </h4>
         {Object.entries(stats.segments_skipped).map(([key, val]) => (
           <div key={key} className="flex justify-between mb-1">
-            <span className="capitalize">{key}:</span>
+            <span className="capitalize">{t(`segments.${key}`)}:</span>
             <span className="text-green-400">{val}</span>
           </div>
         ))}
@@ -163,39 +167,41 @@ const StatsPage: React.FC = () => {
 
       {stats.userSubmissions && (
         <div className="mt-2.5">
-          <h4 className="m-0 mb-2.5 text-sm text-gray-400">Your Submissions</h4>
+          <h4 className="m-0 mb-2.5 text-sm text-gray-400">
+            {t("popup.yourSubmissions")}
+          </h4>
           <div className="flex justify-between mb-1">
-            <span>Total:</span>
+            <span>{t("popup.total")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.total.toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between mb-1">
-            <span>Accepted:</span>
+            <span>{t("popup.accepted")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.accepted.toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between mb-1">
-            <span>Pending:</span>
+            <span>{t("popup.pending")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.pending.toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between mb-1">
-            <span>Acceptance rate:</span>
+            <span>{t("popup.acceptanceRate")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.acceptance_rate.toFixed(1)}%
             </span>
           </div>
           <div className="flex justify-between mb-1">
-            <span>Current streak:</span>
+            <span>{t("popup.currentStreak")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.current_streak}
             </span>
           </div>
           <div className="flex justify-between">
-            <span>Best streak:</span>
+            <span>{t("popup.bestStreak")}:</span>
             <span className="text-green-400">
               {stats.userSubmissions.best_streak}
             </span>
@@ -204,7 +210,7 @@ const StatsPage: React.FC = () => {
       )}
 
       <div className="mt-3.5 text-[13px] text-gray-400">
-        Community Submissions:{" "}
+        {t("popup.communitySubmissions")}:{" "}
         <span className="text-green-400">
           {stats.total_submissions.toLocaleString()}
         </span>
