@@ -43,6 +43,7 @@ function IndexPopup() {
   const [setupPageKey, setSetupPageKey] = useState("")
   const [errorMessage, setErrorMessage] = useState(null)
   const startSecRef = useRef(startSec)
+  const canSubmit = Number.isFinite(Number(tmdbId)) && Number(tmdbId) > 0
 
   const loadPlayerInfo = useCallback(async () => {
     const [tab] = await api.tabs.query({ active: true, currentWindow: true })
@@ -157,6 +158,8 @@ function IndexPopup() {
   }
 
   async function handleSubmit() {
+    if (!canSubmit) return
+
     const { introdb_api_key } = await api.storage.local.get(["introdb_api_key"])
     const endSecValue =
       endSec.trim() === ""
@@ -301,6 +304,7 @@ function IndexPopup() {
                 notice={notice}
                 mediaTitle={mediaTitle}
                 mediaMeta={mediaMeta}
+                canSubmit={canSubmit}
                 segment={segment}
                 setSegment={setSegment}
                 startSec={startSec}

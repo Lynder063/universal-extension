@@ -6,6 +6,7 @@ export interface MainPageProps {
   notice: string
   mediaTitle: string
   mediaMeta: string
+  canSubmit: boolean
   segment: SegmentType
   setSegment: (s: SegmentType) => void
   startSec: string
@@ -24,6 +25,7 @@ export function MainPage({
   notice,
   mediaTitle,
   mediaMeta,
+  canSubmit,
   segment,
   setSegment,
   startSec,
@@ -109,7 +111,12 @@ export function MainPage({
       <button
         type="button"
         onClick={onSubmit}
-        className="border-gradient-pill p-3.5 w-full cursor-pointer font-bold uppercase text-[11px] tracking-[1px] mt-[5px] text-green-400 hover:text-green-400 border-green-400/30">
+        disabled={!canSubmit}
+        className={`border-gradient-pill p-3.5 w-full font-bold uppercase text-[11px] tracking-[1px] mt-[5px] border-green-400/30 ${
+          canSubmit
+            ? "cursor-pointer text-green-400 hover:text-green-400"
+            : "cursor-not-allowed text-gray-600 opacity-60"
+        }`}>
         {t("popup.submit")}
       </button>
       <div
