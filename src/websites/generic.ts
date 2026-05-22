@@ -4,7 +4,7 @@ function cleanTitle(title: string, domain: string): string {
   return title
     .replace(/\s*\(\d{4}\)\s*/g, "") // Remove year in parentheses
     .replace(/\s*\b(19|20)\d{2}\b\s*/g, "") // Remove standalone year
-    .replace(/-\d{4}-\d+$/, "") // Remove trailing year and ID for nepu.to
+    .replace(/-\d{4}-\d+$/, "") // Remove trailing year and ID
     .replace(new RegExp(domain.replace(/\./g, "\\."), "gi"), "")
     .replace(new RegExp(domain.split(".")[0], "gi"), "")
     .replace(/Watching|Online|HD|1080p|720p|4K|Stream/gi, "")
