@@ -1,11 +1,17 @@
 import { extractAppleTV, matchAppleTV } from "./AppleTV"
+import { extractDisneyPlus, matchDisneyPlus } from "./DisneyPlus"
 import { extractGeneric } from "./generic"
 import { extractHBOMax, matchHBOMax } from "./HBOMax"
+import { extractHulu, matchHulu } from "./Hulu"
+import { extractMax, matchMax } from "./Max"
 import { extractNetflix, matchNetflix } from "./Netflix"
 import { extractParamountPlus, matchParamountPlus } from "./ParamountPlus"
 import { extractPeacock, matchPeacock } from "./Peacock"
 import { extractPlex, matchPlex } from "./Plex"
 import { extractPrimeVideo, matchPrimeVideo } from "./PrimeVideo"
+import { extractRakutenTVPlayer, matchRakutenTVPlayer } from "./RakutenTV"
+import { extractSkyShowtime, matchSkyShowtime } from "./SkyShowtime"
+import { extractStarz, matchStarz } from "./Starz"
 import type { MediaContext } from "./types"
 
 export type { MediaContext }
@@ -21,17 +27,19 @@ const SITE_EXTRACTORS: Array<{
 }> = [
   { match: matchNetflix, extract: extractNetflix },
   { match: matchHBOMax, extract: extractHBOMax },
+  { match: matchMax, extract: extractMax },
   { match: matchAppleTV, extract: extractAppleTV },
+  { match: matchDisneyPlus, extract: extractDisneyPlus },
+  { match: matchHulu, extract: extractHulu },
   { match: matchParamountPlus, extract: extractParamountPlus },
   { match: matchPeacock, extract: extractPeacock },
   { match: matchPlex, extract: extractPlex },
-  { match: matchPrimeVideo, extract: extractPrimeVideo }
+  { match: matchPrimeVideo, extract: extractPrimeVideo },
+  { match: matchRakutenTVPlayer, extract: extractRakutenTVPlayer },
+  { match: matchSkyShowtime, extract: extractSkyShowtime },
+  { match: matchStarz, extract: extractStarz }
 ]
 
-/**
- * Extract media context for the current page.
- * Uses a site-specific extractor if the URL matches one; otherwise uses the generic extractor.
- */
 export async function extractMediaContext(
   url: string,
   documentTitle: string,

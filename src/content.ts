@@ -17,7 +17,7 @@ import type { MediaContext } from "~/websites"
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
-  all_frames: true,
+  all_frames: false,
   run_at: "document_idle"
 }
 
@@ -70,7 +70,6 @@ interface ContentRuntimeState {
 }
 
 const MAX_RETRIES = 3
-const URL_CHANGE_POLL_MS = 1000
 const PLAYER_POLL_MS = 10000
 const PLAYBACK_POLL_MS = 400
 const INVALID_TITLE_RETRY_DELAY_MS = 3000
@@ -146,20 +145,34 @@ function buildActiveSegments(response: IntroResponse): ActiveSegments {
   return segments
 }
 
-// Monitor for URL changes to reset retry counter
+function handleUrlChange() {
+  if (window.location.href !== state.lastUrl) {
+    state.lastUrl = window.location.href
+    state.retryCount = 0
+    state.suppressUntilMs = 0
+    resetPageState()
+    state.lastLookupKey = null
+    state.activeMediaKey = null
+    scheduleInit(URL_CHANGE_INIT_DELAY_MS)
+  }
+}
+
 function monitorUrlChanges() {
-  setInterval(() => {
-    if (window.location.href !== state.lastUrl) {
-      console.log("URL changed, resetting retry counter")
-      state.lastUrl = window.location.href
-      state.retryCount = 0
-      state.suppressUntilMs = 0
-      resetPageState()
-      state.lastLookupKey = null
-      state.activeMediaKey = null
-      scheduleInit(URL_CHANGE_INIT_DELAY_MS)
-    }
-  }, URL_CHANGE_POLL_MS)
+  const originalPushState = history.pushState.bind(history)
+  const originalReplaceState = history.replaceState.bind(history)
+
+  history.pushState = (...args) => {
+    originalPushState(...args)
+    window.dispatchEvent(new Event("urlchange"))
+  }
+
+  history.replaceState = (...args) => {
+    originalReplaceState(...args)
+    window.dispatchEvent(new Event("urlchange"))
+  }
+
+  window.addEventListener("popstate", handleUrlChange)
+  window.addEventListener("urlchange", handleUrlChange)
 }
 
 function scheduleInit(delayMs = DEFAULT_INIT_DELAY_MS) {
@@ -190,6 +203,10 @@ function clearMediaState() {
 function resetPageState() {
   clearSkipButton()
   clearMediaState()
+  if (state.playbackIntervalId) {
+    clearInterval(state.playbackIntervalId)
+    state.playbackIntervalId = null
+  }
 }
 
 function isInvalidDocumentTitle(title: string): boolean {
@@ -307,7 +324,6 @@ function createBtn(type: string, endMs: number) {
     gap: "8px"
   })
 
-  // Add hover effect
   state.skipButton.addEventListener("mouseenter", () => {
     if (!state.skipButton) return
     state.skipButton.style.backgroundColor = "rgba(255, 255, 255, 0.1)"
@@ -369,7 +385,7 @@ function monitorPlayback() {
     for (const [type, segments] of Object.entries(state.activeSegments)) {
       for (const s of segments) {
         const endMs =
-          s.end_ms >= END_OF_VIDEO_SENTINEL_MS || !s.end_ms
+          s.end_ms >= END_OF_VIDEO_SENTINEL_MS || s.end_ms == null
             ? durationMs
             : s.end_ms
         if (now >= s.start_ms && now < endMs - 500) {
@@ -401,7 +417,6 @@ async function init() {
       return
     }
 
-    // Start URL change monitoring on first init
     if (!state.urlMonitoringStarted) {
       monitorUrlChanges()
       state.urlMonitoringStarted = true
@@ -411,38 +426,31 @@ async function init() {
 
     const video = getActiveVideo()
     if (!video) {
-      console.log("No HTML video element detected; skipping TIDB lookup")
       resetPageState()
       return
     }
 
     if (isInvalidDocumentTitle(document.title)) {
-      console.log("Skipping invalid page title:", document.title)
       if (state.retryCount < MAX_RETRIES) {
         state.retryCount++
-        console.log(
-          `Retry attempt ${state.retryCount}/${MAX_RETRIES} for invalid title`
-        )
         setTimeout(init, INVALID_TITLE_RETRY_DELAY_MS)
       } else {
-        console.log("Max retries reached for invalid title, stopping attempts")
         suppressLookups(LONG_SUPPRESSION_MS)
       }
       return
     }
 
-    const ctx = (await extractMediaContext(
+    const ctx = await extractMediaContext(
       window.location.href,
       document.title,
       document.body.innerText,
       video?.currentTime ?? 0
-    )) as MediaContext
+    )
 
     const mediaKey = makeMediaKey(ctx)
     if (!mediaKey) {
       const attemptKey = `missing_ids|${ctx.type}|${ctx.title || ""}`
       if (attemptKey === state.lastLookupKey) return
-      console.log("Skipping TIDB lookup: media is missing TMDB ID and IMDb ID")
       state.lastLookupKey = attemptKey
       resetPageState()
       return
@@ -476,12 +484,9 @@ async function init() {
     })) as IntroResponse
     state.inFlightMediaKey = null
 
-    console.log("TIDB API Response:", res)
-
     if (res?.status === "success") {
       const data = buildActiveSegments(res)
 
-      console.log("Parsed segments:", data)
       state.activeSegments = data
       state.lastPlayerInfo = {
         title: res.title || ctx.title || "Detected",
@@ -516,7 +521,6 @@ async function init() {
         })
       }
 
-      // Reset retry counter on successful data retrieval
       state.retryCount = 0
       state.suppressUntilMs = 0
       monitorPlayback()
@@ -537,15 +541,9 @@ async function init() {
     } else if (!state.activeSegments) {
       if (state.retryCount < MAX_RETRIES) {
         state.retryCount++
-        console.log(
-          `No segments found, retry attempt ${state.retryCount}/${MAX_RETRIES}`
-        )
         suppressLookups(SHORT_SUPPRESSION_MS)
         setTimeout(init, SEGMENT_RETRY_DELAY_MS)
       } else {
-        console.log(
-          "Max retries reached for finding segments, stopping attempts"
-        )
         suppressLookups(LONG_SUPPRESSION_MS)
       }
     }

@@ -1,4 +1,5 @@
 import type { MediaContext } from "./types"
+import { parseSeasonEpisodeFromBody, getFirstBodyLine } from "./utils"
 
 const PLEX_URL = /^https?:\/\/(app\.)?plex\.tv\//i
 
@@ -26,7 +27,7 @@ function cleanTitle(title: string): string {
     .trim()
 }
 
-function extractTitle(documentTitle: string): string {
+function extractTitle(documentTitle: string, bodyText: string): string {
   const og = getMetaContent('meta[property="og:title"]')
   const tw = getMetaContent('meta[name="twitter:title"]')
   const heading =
@@ -39,24 +40,11 @@ function extractTitle(documentTitle: string): string {
   let title = og || tw || heading || documentTitle || ""
 
   if (!title || /\bplex\b/i.test(title)) {
-    const domMatch = document.body.innerText.match(/^(?:#\s*)?(.+?)(?:\s*\n|$)/)
-    if (domMatch) title = domMatch[1].trim()
+    const domMatch = getFirstBodyLine(bodyText)
+    if (domMatch) title = domMatch
   }
 
   return cleanTitle(title)
-}
-
-function parseSeasonEpisodeFromBody(bodyText: string): {
-  season: number | null
-  episode: number | null
-} {
-  const sE =
-    bodyText.match(/S(\d+)\s*[E:]\s*E?(\d+)/i) || bodyText.match(/(\d+)x(\d+)/i)
-  if (sE) return { season: parseInt(sE[1], 10), episode: parseInt(sE[2], 10) }
-  const long = bodyText.match(/Season\s+(\d+)[,\s]+Episode\s+(\d+)/i)
-  if (long)
-    return { season: parseInt(long[1], 10), episode: parseInt(long[2], 10) }
-  return { season: null, episode: null }
 }
 
 function inferType(
@@ -102,7 +90,7 @@ export async function extractPlex(
   currentTime = 0
 ): Promise<MediaContext> {
   const urlObj = new URL(url, "https://app.plex.tv")
-  const title = extractTitle(documentTitle)
+  const title = extractTitle(documentTitle, bodyText)
   const { season, episode } = parseSeasonEpisodeFromBody(bodyText)
   const type = inferType(urlObj, bodyText, season, episode)
   const year = extractYear(

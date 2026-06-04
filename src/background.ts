@@ -148,8 +148,7 @@ async function handleDiscovery(
     const eNum = data.episode ?? 1
 
     // Get the introdb_api_key from storage for authentication
-    const storage = typeof browser !== "undefined" ? browser : chrome
-    const { introdb_api_key } = await storage.storage.local.get([
+    const { introdb_api_key } = await chrome.storage.local.get([
       "introdb_api_key"
     ])
 
@@ -216,7 +215,8 @@ async function handleDiscovery(
       if (segments.length > 0) result[key] = segments
     }
     return result
-  } catch {
+  } catch (err) {
+    console.error("handleDiscovery error:", err)
     return { status: "api_unreachable" }
   }
 }

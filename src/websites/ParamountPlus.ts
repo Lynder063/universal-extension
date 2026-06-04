@@ -1,4 +1,5 @@
 import type { MediaContext } from "./types"
+import { parseSeasonEpisodeFromBody } from "./utils"
 
 const PARAMOUNT_URL = /^https?:\/\/(www\.)?paramountplus\.com\//i
 
@@ -7,19 +8,6 @@ function cleanTitle(title: string): string {
     .replace(/\s*[-|]\s*Paramount\+?$/i, "")
     .split(/[-|–|—]/)[0]
     .trim()
-}
-
-function parseSeasonEpisodeFromBody(bodyText: string): {
-  season: number | null
-  episode: number | null
-} {
-  const sE =
-    bodyText.match(/S(\d+)\s*:\s*E(\d+)/i) || bodyText.match(/(\d+)x(\d+)/i)
-  if (sE) return { season: parseInt(sE[1], 10), episode: parseInt(sE[2], 10) }
-  const long = bodyText.match(/Season\s+(\d+)[,\s]+Episode\s+(\d+)/i)
-  if (long)
-    return { season: parseInt(long[1], 10), episode: parseInt(long[2], 10) }
-  return { season: null, episode: null }
 }
 
 export function matchParamountPlus(url: string): boolean {
