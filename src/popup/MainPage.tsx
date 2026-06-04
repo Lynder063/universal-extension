@@ -81,7 +81,7 @@ export function MainPage({
       <label className="block text-[9px] font-bold text-green-400 mb-1.5 uppercase tracking-[0.5px]">
         {t("popup.segment")}
       </label>
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      <div className="grid grid-cols-4 gap-2 mb-3">
         {SEGMENT_TYPES.map((s) => (
           <button
             key={s}

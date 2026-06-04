@@ -20,7 +20,7 @@ import {
 } from "./shared/analytics"
 import type { MediaType, PlayerInfoMessage } from "./shared/media"
 
-type PopupView = "setup" | "main" | "stats"
+type ActiveTab = "submit" | "stats"
 type PlayerInfoResponse = PlayerInfoMessage | null
 type ActiveTabPlayerInfoResult =
   | { state: "missing_tab"; response: null }
@@ -48,7 +48,7 @@ function isSupportedTabUrl(url?: string) {
 
 function IndexPopup() {
   const { t } = useTranslation()
-  const [view, setView] = useState<PopupView>("setup")
+  const [activeTab, setActiveTab] = useState<ActiveTab>("submit")
   const [mediaTitle, setMediaTitle] = useState("Detecting...")
   const [mediaMeta, setMediaMeta] = useState("Initializing")
   const [tmdbId, setTmdbId] = useState("")
@@ -71,7 +71,9 @@ function IndexPopup() {
   const startSecRef = useRef(startSec)
   const videoDurationRef = useRef(videoDuration)
   const trackedPopupMediaKeyRef = useRef<string | null>(null)
-  const canSubmit = Number.isFinite(Number(tmdbId)) && Number(tmdbId) > 0
+  const hasApiKey = apiKeyInput.trim().length > 0
+  const canSubmit =
+    hasApiKey && Number.isFinite(Number(tmdbId)) && Number(tmdbId) > 0
 
   const appendDebugLog = useCallback((message: string) => {
     console.debug("[popup]", message)
@@ -79,7 +81,6 @@ function IndexPopup() {
       if (previousLogs[0] === message) {
         return previousLogs
       }
-
       return [message, ...previousLogs].slice(0, 6)
     })
   }, [])
@@ -97,7 +98,6 @@ function IndexPopup() {
     const normalizedTmdbId = Number.isFinite(tmdbIdNumber) ? tmdbIdNumber : 0
     const normalizedSeason = mediaType === "tv" ? Number(season) || 0 : 0
     const normalizedEpisode = mediaType === "tv" ? Number(episode) || 0 : 0
-
     return {
       tmdbId: normalizedTmdbId,
       mediaType,
@@ -136,7 +136,6 @@ function IndexPopup() {
           })
           return
         }
-
         resolve({ response: message })
       })
     })
@@ -276,26 +275,25 @@ function IndexPopup() {
         }
 
         if (storedApiKey) {
-          setView("main")
           await loadPlayerInfo()
         }
       })
   }, [loadPlayerInfo, t])
 
   useEffect(() => {
-    if (view !== "main") return
+    if (!hasApiKey) return
     const id = setInterval(() => {
       loadPlayerInfo()
     }, POLL_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [view, loadPlayerInfo])
+  }, [hasApiKey, loadPlayerInfo])
 
   async function handleSaveKey() {
     const key = apiKeyInput.trim()
     if (key) {
       await api.storage.local.set({ introdb_api_key: key })
       track("connect_click", currentMediaProps())
-      setView("main")
+      setActiveTab("submit")
       await loadPlayerInfo()
     } else {
       await api.storage.local.remove("introdb_api_key")
@@ -385,16 +383,6 @@ function IndexPopup() {
     setStatus("")
     setStatusColor("")
     setNotice("")
-    setView("setup")
-  }
-
-  const goToStats = () => {
-    setView("stats")
-  }
-
-  const goToMain = () => {
-    setView("main")
-    loadPlayerInfo()
   }
 
   const fetchCurrentPlayerTimeSec = async () => {
@@ -423,7 +411,7 @@ function IndexPopup() {
     <>
       <ErrorDisplay message={errorMessage} />
 
-      <div className="box-border w-80 max-w-full m-0 p-0 overflow-hidden bg-gray-950 text-white font-ubuntu">
+      <div className="box-border w-[480px] max-w-full m-0 p-0 overflow-hidden bg-gray-950 text-white font-ubuntu">
         <div className="box-border w-full p-5 border-t-2 border-green-400">
           <div className="flex items-center justify-between mb-4">
             <a
@@ -432,73 +420,79 @@ function IndexPopup() {
               rel="noopener noreferrer">
               <img src={smallLogo} alt="TIDB" className="h-7 w-auto block" />
             </a>
-            {view !== "setup" && (
+          </div>
+
+          <div className="flex border-b border-gray-700 mb-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("submit")}
+              className={`flex-1 pb-2.5 text-xs font-bold uppercase tracking-[1px] transition-colors ${
+                activeTab === "submit"
+                  ? "text-green-400 border-b-2 border-green-400"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}>
+              {t("popup.title")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("stats")}
+              className={`flex-1 pb-2.5 text-xs font-bold uppercase tracking-[1px] transition-colors ${
+                activeTab === "stats"
+                  ? "text-green-400 border-b-2 border-green-400"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}>
+              {t("navigation.stats")}
+            </button>
+          </div>
+
+          <div className="box-border w-full overflow-hidden bg-gray-900/60 p-[18px] rounded-4xl border border-white/[.08] shadow-[0_15px_35px_rgba(0,0,0,0.6)]">
+            {activeTab === "submit" && (
               <>
-                {view === "stats" ? (
-                  <button
-                    onClick={goToMain}
-                    className="liquid-glass-button back-button text-sm py-1.5 px-3">
-                    &larr; {t("navigation.back")}
-                  </button>
+                {!hasApiKey && (
+                  <p className="text-xs text-gray-400 font-bold mb-4 leading-relaxed">
+                    {t("setup.description1")}
+                    <br />
+                    <br />
+                    {t("setup.description2")}
+                  </p>
+                )}
+                {hasApiKey ? (
+                  <MainPage
+                    notice={notice}
+                    mediaTitle={mediaTitle}
+                    mediaMeta={mediaMeta}
+                    showDebugLogs={showDebugLogs}
+                    debugLogs={debugLogs}
+                    canSubmit={canSubmit}
+                    segment={segment}
+                    setSegment={setSegment}
+                    startSec={startSec}
+                    setStartSec={setStartSec}
+                    endSec={endSec}
+                    setEndSec={setEndSec}
+                    videoDuration={videoDuration}
+                    setVideoDuration={setVideoDuration}
+                    onUsePlayerTimeForStart={handleUsePlayerTimeForStart}
+                    onUsePlayerTimeForEnd={handleUsePlayerTimeForEnd}
+                    status={status}
+                    statusColor={statusColor}
+                    onSubmit={handleSubmit}
+                    onDisconnect={handleDisconnect}
+                  />
                 ) : (
-                  <button
-                    onClick={goToStats}
-                    className="liquid-glass-button text-base font-bold">
-                    {t("navigation.stats")}
-                  </button>
+                  <SetupPage
+                    apiKey={apiKeyInput}
+                    onApiKeyChange={setApiKeyInput}
+                    onSaveKey={handleSaveKey}
+                  />
                 )}
               </>
             )}
-          </div>
-
-          {view === "setup" && (
-            <p className="block text-xs text-gray-400 font-bold mb-3.5">
-              {t("setup.description1")}
-              <br />
-              <br />
-              {t("setup.description2")}
-            </p>
-          )}
-
-          <div className="box-border w-full overflow-hidden bg-gray-900/60 p-[18px] rounded-4xl border border-white/[.08] shadow-[0_15px_35px_rgba(0,0,0,0.6)]">
-            {view === "setup" && (
-              <SetupPage
-                apiKey={apiKeyInput}
-                onApiKeyChange={setApiKeyInput}
-                anonymousUsageReportingEnabled={anonymousUsageReportingEnabled}
-                onAnonymousUsageReportingChange={
-                  handleAnonymousUsageReportingChange
-                }
-                onSaveKey={handleSaveKey}
-              />
-            )}
-            {view === "main" && (
-              <MainPage
-                notice={notice}
-                mediaTitle={mediaTitle}
-                mediaMeta={mediaMeta}
-                showDebugLogs={showDebugLogs}
-                debugLogs={debugLogs}
-                canSubmit={canSubmit}
-                segment={segment}
-                setSegment={setSegment}
-                startSec={startSec}
-                setStartSec={setStartSec}
-                endSec={endSec}
-                setEndSec={setEndSec}
-                videoDuration={videoDuration}
-                setVideoDuration={setVideoDuration}
-                onUsePlayerTimeForStart={handleUsePlayerTimeForStart}
-                onUsePlayerTimeForEnd={handleUsePlayerTimeForEnd}
-                status={status}
-                statusColor={statusColor}
-                onSubmit={handleSubmit}
-                onDisconnect={handleDisconnect}
-              />
-            )}
-            {view === "stats" && (
+            {activeTab === "stats" && (
               <StatsPage
-                anonymousUsageReportingEnabled={anonymousUsageReportingEnabled}
+                anonymousUsageReportingEnabled={
+                  anonymousUsageReportingEnabled
+                }
                 onAnonymousUsageReportingChange={
                   handleAnonymousUsageReportingChange
                 }
