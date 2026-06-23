@@ -7,8 +7,7 @@ import {
   parseSeasonEpisodeFromBody
 } from "./utils"
 
-const VUDU_URL =
-  /^https?:\/\/(www\.)?(vudu\.com|athome\.fandango\.com)\//i
+const VUDU_URL = /^https?:\/\/(www\.)?(vudu\.com|athome\.fandango\.com)\//i
 
 export function matchVudu(url: string): boolean {
   return VUDU_URL.test(url)
@@ -17,7 +16,10 @@ export function matchVudu(url: string): boolean {
 function cleanTitle(title: string): string {
   return title
     .replace(/\s*[-|]\s*(Vudu|Fandango\s*at\s*Home)$/i, "")
-    .replace(/\s*[-|]\s*(Rent|Buy|Watch|Stream)\s+(or\s+)?(Buy|Rent|Watch|Stream)?\s*$/i, "")
+    .replace(
+      /\s*[-|]\s*(Rent|Buy|Watch|Stream)\s+(or\s+)?(Buy|Rent|Watch|Stream)?\s*$/i,
+      ""
+    )
     .replace(/\s*[-|]\s*Fandango\s*$/i, "")
     .trim()
 }

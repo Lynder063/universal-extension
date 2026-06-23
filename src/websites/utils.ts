@@ -56,9 +56,7 @@ export function parseSeasonEpisodeFromBody(bodyText: string): {
 // ---------------------------------------------------------------------------
 // Helper: extract @type from an item (handles string or array forms)
 // ---------------------------------------------------------------------------
-function getJsonLdType(
-  item: Record<string, unknown>
-): string | null {
+function getJsonLdType(item: Record<string, unknown>): string | null {
   const type = item["@type"]
   if (typeof type === "string") return type
   if (Array.isArray(type)) {
@@ -116,14 +114,15 @@ export function extractJsonLd(): Record<string, unknown> | null {
         continue
       }
 
-      const items: Record<string, unknown>[] =
-        (data["@graph"] as Record<string, unknown>[] | undefined) || [data]
+      const items: Record<string, unknown>[] = (data["@graph"] as
+        | Record<string, unknown>[]
+        | undefined) || [data]
 
       for (const item of items) {
         // Check mainEntity or about — sites often wrap media in WebPage
-        const mainEntity = (
-          item.mainEntity || item.about
-        ) as Record<string, unknown> | undefined
+        const mainEntity = (item.mainEntity || item.about) as
+          | Record<string, unknown>
+          | undefined
         if (mainEntity) {
           const mainType = getJsonLdType(mainEntity)
           if (mainType && MEDIA_TYPES.has(mainType)) {
@@ -143,8 +142,7 @@ export function extractJsonLd(): Record<string, unknown> | null {
           if (PRIORITY_TYPES.has(type)) return item
 
           // Score secondary types by specificity
-          const isSeries =
-            type === "TVSeries" || type === "CreativeWorkSeries"
+          const isSeries = type === "TVSeries" || type === "CreativeWorkSeries"
           const score = isSeries ? 3 : 2
           if (score > bestScore) {
             bestItem = item
@@ -257,9 +255,7 @@ export function extractTitleFromJsonLd(
   jsonLd: Record<string, unknown>
 ): string | null {
   // Helper: safely get a string property from a nested object
-  const getObjName = (
-    obj: unknown
-  ): string | null => {
+  const getObjName = (obj: unknown): string | null => {
     if (obj && typeof obj === "object" && !Array.isArray(obj)) {
       const val = (obj as Record<string, unknown>).name
       return typeof val === "string" ? val.trim() || null : null
@@ -340,7 +336,6 @@ export function extractMediaTypeFromJsonLd(
   }
   return null
 }
-
 
 export function extractMetaTitle(): string {
   const og = document

@@ -19,7 +19,7 @@ function cleanTitle(title: string): string {
 }
 
 export async function extractKanopy(
-  url: string,
+  _url: string,
   documentTitle: string,
   _bodyText: string,
   currentTime = 0
@@ -42,9 +42,6 @@ export async function extractKanopy(
   if (!title) {
     title = cleanTitle(documentTitle)
   }
-
-  // Kanopy uses product IDs — everything is a "product" (movie or single series page)
-  const isProduct = /\/product\//i.test(url)
 
   return {
     title: title || "Kanopy",

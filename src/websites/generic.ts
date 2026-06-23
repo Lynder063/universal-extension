@@ -17,10 +17,7 @@ function cleanDocumentTitle(title: string, domain: string): string {
     .replace(new RegExp(domain.replace(/\./g, "\\."), "gi"), "")
     .replace(new RegExp(domain.split(".")[0], "gi"), "")
     .replace(/Watching|Online|HD|1080p|720p|4K|Stream/gi, "")
-    .replace(
-      /\s*[-|–|—:]\s*(Watch|Stream|Full|Movie|TV\s*Show|Series).*$/i,
-      ""
-    )
+    .replace(/\s*[-|–|—:]\s*(Watch|Stream|Full|Movie|TV\s*Show|Series).*$/i, "")
     .split(/[-|–|—]/)[0]
     .trim()
 }
@@ -31,9 +28,7 @@ export async function extractGeneric(
   bodyText: string,
   currentTime = 0
 ): Promise<MediaContext> {
-): Promise<MediaContext> {
   let tmdb_id: number | null = null
-  let imdb_id: string | null = null
   let imdb_id: string | null = null
   let season: number | null = null
   let episode: number | null = null
@@ -84,8 +79,7 @@ export async function extractGeneric(
     if (season === null) {
       const seasonParam = params.get("season")
       const sParam = params.get("s")
-      const sp =
-        seasonParam || sParam
+      const sp = seasonParam || sParam
       if (sp && /^\d+$/.test(sp)) season = parseInt(sp, 10)
     }
     if (episode === null) {
@@ -108,8 +102,7 @@ export async function extractGeneric(
     const watchMatch = url.match(/\/watch\/(\d+)(?:\/(\d+))?(?:\/(\d+))?/i)
     if (watchMatch) {
       tmdb_id = parseInt(watchMatch[1], 10)
-      if (watchMatch[2] && season === null)
-        season = parseInt(watchMatch[2], 10)
+      if (watchMatch[2] && season === null) season = parseInt(watchMatch[2], 10)
       if (watchMatch[3] && episode === null)
         episode = parseInt(watchMatch[3], 10)
     }
@@ -203,9 +196,7 @@ export async function extractGeneric(
       urlYearMatch ||
       documentTitle.match(/\((19|20)\d{2}\)/) ||
       bodyText.match(/\b(19|20)\d{2}\b/)
-    extractedYear = yearMatch
-      ? yearMatch[0].replace(/[-()]/g, "")
-      : undefined
+    extractedYear = yearMatch ? yearMatch[0].replace(/[-()]/g, "") : undefined
   }
 
   // --------------------------------------------------------------------------
@@ -258,9 +249,7 @@ export async function extractGeneric(
 
   if (!title) {
     // 3. Try slug from /media/tmdb-{type}-{id}-{slug} URL pattern
-    const mediaSlug = url.match(
-      /\/media\/tmdb-(?:tv|movie)-\d+-([^/]+)\//i
-    )
+    const mediaSlug = url.match(/\/media\/tmdb-(?:tv|movie)-\d+-([^/]+)\//i)
     if (mediaSlug) {
       title = mediaSlug[1].replace(/[-_]/g, " ")
       titleFromUrl = true
@@ -315,7 +304,6 @@ export async function extractGeneric(
   // G. Return
   // --------------------------------------------------------------------------
   return {
-    title: title || "Untitled",
     title: title || "Untitled",
     tmdb_id,
     imdb_id,

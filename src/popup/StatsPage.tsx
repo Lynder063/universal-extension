@@ -9,8 +9,7 @@ import {
 import { api, API_URL } from "./api"
 
 type SegmentTotals = Record<TrackableSegmentType, number>
-
-interface StatsPageProps {}
+type StatsPageProps = Record<string, never>
 
 interface UserSubmissionsState {
   total: number
@@ -78,10 +77,6 @@ const DEFAULT_STATS: StatsState = {
   account_time_saved_ms: 0,
   segments_skipped: createEmptySegmentTotals(),
   time_saved_by_type_ms: createEmptySegmentTotals(),
-  local_time_saved_ms: 0,
-  account_time_saved_ms: 0,
-  segments_skipped: createEmptySegmentTotals(),
-  time_saved_by_type_ms: createEmptySegmentTotals(),
   total_submissions: 0
 }
 
@@ -117,7 +112,6 @@ const StatsPage: React.FC<StatsPageProps> = () => {
         let communityTotal = 0
         try {
           const res = await fetch(`${API_URL}/stats`)
-          const res = await fetch(`${API_URL}/stats`)
           if (res.ok) {
             const data = await res.json()
             communityTotal = data.total_submissions || 0
@@ -131,7 +125,6 @@ const StatsPage: React.FC<StatsPageProps> = () => {
           "introdb_api_key"
         ])
         const local = storage.skipButtonStats as LocalSkipStats | undefined
-        const local = storage.skipButtonStats as LocalSkipStats | undefined
         const introdb_api_key = storage.introdb_api_key as string | undefined
 
         const baseStats: StatsState = {
@@ -140,15 +133,6 @@ const StatsPage: React.FC<StatsPageProps> = () => {
         }
 
         if (local) {
-          baseStats.local_time_saved_ms = getTotalSavedTime(
-            local.time_saved_by_type_ms
-          )
-          baseStats.segments_skipped = mergeSegmentTotals(
-            local.segments_skipped
-          )
-          baseStats.time_saved_by_type_ms = mergeSegmentTotals(
-            local.time_saved_by_type_ms
-          )
           baseStats.local_time_saved_ms = getTotalSavedTime(
             local.time_saved_by_type_ms
           )
@@ -172,31 +156,18 @@ const StatsPage: React.FC<StatsPageProps> = () => {
               string,
               unknown
             >
-            const userRes = await fetch(`${API_URL}/user/stats`, {
-              headers: {
-                Authorization: `Bearer ${introdb_api_key.trim()}`
-              }
-            })
-            const userData = (await userRes.json().catch(() => ({}))) as Record<
-              string,
-              unknown
-            >
+
             if (!userRes.ok) {
               if (userRes.status === 401) {
                 setApiKeyError(t("errors.apiKeyNotAccepted"))
-                setApiKeyError(t("errors.apiKeyNotAccepted"))
               } else {
-                setApiKeyError(t("errors.couldNotLoadAccountStats"))
                 setApiKeyError(t("errors.couldNotLoadAccountStats"))
               }
             } else {
               const tsMs = userData.total_time_saved_ms
               if (typeof tsMs === "number" && tsMs >= 0) {
                 baseStats.account_time_saved_ms = tsMs
-                baseStats.account_time_saved_ms = tsMs
               }
-
-              baseStats.userSubmissions = normalizeUserSubmissions(userData)
 
               baseStats.userSubmissions = normalizeUserSubmissions(userData)
             }
@@ -210,8 +181,8 @@ const StatsPage: React.FC<StatsPageProps> = () => {
         setLoading(false)
       }
     }
+
     loadStats()
-  }, [t])
   }, [t])
 
   const formatDuration = (ms: number) => {
@@ -220,47 +191,15 @@ const StatsPage: React.FC<StatsPageProps> = () => {
     const h = Math.floor(seconds / 3600)
     const s = seconds % 60
     return `${h > 0 ? h + t("time.hours") + " " : ""}${m > 0 ? m + t("time.minutes") + " " : ""}${s}${t("time.seconds")}`
-    return `${h > 0 ? h + t("time.hours") + " " : ""}${m > 0 ? m + t("time.minutes") + " " : ""}${s}${t("time.seconds")}`
   }
 
   const totalSegmentsSkipped = Object.values(stats.segments_skipped).reduce(
     (total, value) => total + value,
     0
   )
-  const totalSegmentsSkipped = Object.values(stats.segments_skipped).reduce(
-    (total, value) => total + value,
-    0
-  )
 
   return (
-    <div className="text-gray-200 font-sans">
-      <div className="flex flex-col gap-2">
-        <div className="text-xs font-bold text-white">
-          {t("popup.segmentsSkipped")}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <StatCard
-            label={t("popup.total")}
-            value={totalSegmentsSkipped}
-            loading={loading}
-          />
-          <StatCard
-            label={t("popup.personalTimeSaved")}
-            value={formatDuration(stats.local_time_saved_ms)}
-            loading={loading}
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {TRACKED_SEGMENT_TYPES.map((key) => (
-            <StatCard
-              key={key}
-              label={t(`segments.${key}`)}
-              value={stats.segments_skipped[key]}
-              loading={loading}
-            />
-          ))}
-        </div>
-    <div className="text-gray-200 font-sans">
+    <div className="font-sans text-gray-200">
       <div className="flex flex-col gap-2">
         <div className="text-xs font-bold text-white">
           {t("popup.segmentsSkipped")}
@@ -291,37 +230,9 @@ const StatsPage: React.FC<StatsPageProps> = () => {
 
       {stats.userSubmissions && (
         <div className="mt-4">
-          <div className="text-xs font-bold text-white mb-2">
-            {t("popup.yourSubmissions")}
-        <div className="mt-4">
-          <div className="text-xs font-bold text-white mb-2">
+          <div className="mb-2 text-xs font-bold text-white">
             {t("popup.yourSubmissions")}
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <StatCard
-              label={t("popup.total")}
-              value={stats.userSubmissions.total.toLocaleString()}
-            />
-            <StatCard
-              label={t("popup.accepted")}
-              value={stats.userSubmissions.accepted.toLocaleString()}
-            />
-            <StatCard
-              label={t("popup.pending")}
-              value={stats.userSubmissions.pending.toLocaleString()}
-            />
-            <StatCard
-              label={t("popup.acceptanceRate")}
-              value={`${stats.userSubmissions.acceptance_rate.toFixed(1)}%`}
-            />
-            <StatCard
-              label={t("popup.currentStreak")}
-              value={stats.userSubmissions.current_streak}
-            />
-            <StatCard
-              label={t("popup.bestStreak")}
-              value={stats.userSubmissions.best_streak}
-            />
           <div className="grid grid-cols-3 gap-2">
             <StatCard
               label={t("popup.total")}
@@ -352,12 +263,10 @@ const StatsPage: React.FC<StatsPageProps> = () => {
       )}
 
       {apiKeyError && (
-        <div className="mt-3 p-2.5 bg-red-500/10 border border-red-500/40 rounded-2xl text-xs text-red-300">
-        <div className="mt-3 p-2.5 bg-red-500/10 border border-red-500/40 rounded-2xl text-xs text-red-300">
+        <div className="mt-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-2.5 text-xs text-red-300">
           {apiKeyError}
         </div>
       )}
-
     </div>
   )
 }

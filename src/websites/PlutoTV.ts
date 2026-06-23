@@ -34,7 +34,6 @@ export async function extractPlutoTV(
   const pathname = new URL(url, "https://pluto.tv").pathname
 
   // Determine type from URL path
-  const isOnDemandMovie = /\/on-demand\/movies?\//i.test(pathname)
   const isOnDemandSeries = /\/on-demand\/series\//i.test(pathname)
 
   // 1. Try JSON-LD

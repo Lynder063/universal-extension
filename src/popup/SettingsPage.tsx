@@ -167,7 +167,10 @@ export function SettingsPage({
             onChange={(e) => onLanguageChange(e.target.value)}
             className="w-full appearance-none rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 pr-8 text-xs text-gray-200 transition-all hover:border-white/20 focus:border-green-400/50 focus:outline-none cursor-pointer">
             {Object.entries(LANGUAGES).map(([code, name]) => (
-              <option key={code} value={code} className="bg-[#0d0d0d] text-gray-200">
+              <option
+                key={code}
+                value={code}
+                className="bg-[#0d0d0d] text-gray-200">
                 {name}
               </option>
             ))}
@@ -203,7 +206,10 @@ export function SettingsPage({
             {(Object.keys(BUTTON_THEMES) as ButtonTheme[]).map((key) => {
               const theme = BUTTON_THEMES[key]
               return (
-                <option key={key} value={key} className="bg-[#0d0d0d] text-gray-200">
+                <option
+                  key={key}
+                  value={key}
+                  className="bg-[#0d0d0d] text-gray-200">
                   {theme.label}
                 </option>
               )

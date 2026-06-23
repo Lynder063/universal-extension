@@ -38,8 +38,6 @@ export async function extractTubi(
   // Determine type from URL path
   const isSeriesPage = /\/series\//i.test(pathname)
   const isTvShowsPage = /\/tv-shows\//i.test(pathname)
-  const isMoviePage = /\/movies\//i.test(pathname)
-
   // 1. Try JSON-LD (Tubi uses Movie and TVEpisode schemas)
   const jsonLd = extractJsonLd()
   if (jsonLd) {
@@ -64,7 +62,7 @@ export async function extractTubi(
 
   // 3. Extract season/episode from URL (e.g., /tv-shows/123/s01-e02-slug)
   if (season === null || episode === null) {
-    const seMatch = pathname.match(/[sS](\d+)[\-_.\s]?[eE](\d+)/)
+    const seMatch = pathname.match(/[sS](\d+)[-_.\s]?[eE](\d+)/)
     if (seMatch) {
       if (season === null) season = parseInt(seMatch[1], 10)
       if (episode === null) episode = parseInt(seMatch[2], 10)
@@ -83,7 +81,8 @@ export async function extractTubi(
     title = cleanTitle(documentTitle)
   }
 
-  const isTV = isSeriesPage || isTvShowsPage || season !== null || episode !== null
+  const isTV =
+    isSeriesPage || isTvShowsPage || season !== null || episode !== null
 
   return {
     title: title || "Tubi",

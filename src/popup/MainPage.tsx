@@ -35,7 +35,6 @@ export function MainPage({
   mediaMeta,
   showDebugLogs,
   debugLogs,
-  canSubmit,
   segment,
   setSegment,
   startSec,
@@ -48,8 +47,7 @@ export function MainPage({
   onUsePlayerTimeForEnd,
   status,
   statusColor,
-  onSubmit,
-  onDisconnect
+  onSubmit
 }: MainPageProps) {
   const { t } = useTranslation()
 
